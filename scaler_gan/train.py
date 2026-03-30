@@ -4,7 +4,9 @@ import sys
 import git
 
 
-wt_dir = git.Repo(".", search_parent_directories=True).working_tree_dir
+#wt_dir = git.Repo(".", search_parent_directories=True).working_tree_dir
+wt_dir = os.getcwd()
+
 try:
     sys.path.index(wt_dir)
 except ValueError:
@@ -34,7 +36,23 @@ def train(conf: Namespace):
     visualizer = Visualizer(gan, conf)
 
     # Data preparation
-    train_set = MelDataset(conf.input_file, conf.must_divide, **conf.mel_params)
+    # train_set = MelDataset(conf.input_file, conf.must_divide, **conf.mel_params)
+    train_set = MelDataset(
+          training_files=conf.input_file,
+          must_divide=conf.must_divide,
+          segment_size=conf.mel_params.segment_size,
+          n_fft=conf.mel_params.n_fft,
+          num_mels=conf.mel_params.num_mels,
+          hop_size=conf.mel_params.hop_size,
+          win_size=conf.mel_params.win_size,
+          sampling_rate=conf.mel_params.sampling_rate,
+          fmin=conf.mel_params.fmin,
+          fmax=conf.mel_params.fmax,
+          shuffle=True,
+          # DiffATSM additions:
+          use_ppg=conf.use_ppg if hasattr(conf, 'use_ppg') else False,
+          ppg_input_dim=conf.ppg_input_dim if hasattr(conf, 'ppg_input_dim') else 768,
+      )
     if conf.debug:
         if conf.distributed:
             visualizer.logger.info(

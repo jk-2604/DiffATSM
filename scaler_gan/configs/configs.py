@@ -1,6 +1,5 @@
 import argparse
 from typing import Optional
-
 import os
 import json
 import git
@@ -19,6 +18,7 @@ class Config:
         self.parser = argparse.ArgumentParser()
         self.conf = None
         wt_dir = git.Repo('.', search_parent_directories=True).working_tree_dir
+        
         # Paths
         self.parser.add_argument('-f', '--input_file', default=os.path.join(wt_dir, 'data/input.txt'), help='path to inputs filenames path')
         self.parser.add_argument('-inf', '--inference_file', default=os.path.join(wt_dir, 'data/inference.txt'), help='path to test filenames path')
@@ -38,16 +38,22 @@ class Config:
         self.parser.add_argument('--hifi_checkpoint', type=str, default=os.path.join(wt_dir,"pretrained_models/hifi_checkpoint_v1"), help='hifi gan checkpoint path for inference')
         self.parser.add_argument('--hifi_config', type=str, default=os.path.join(wt_dir, "scaler_gan/configs/hifi_config.json"), help='hifi gan config path for inference')
         
-
-
+        # =====================================================================
+        # DiffATSM: PPG & Adaptive Transformation (Paper Section 3.1)
+        # =====================================================================
+        self.parser.add_argument('--use_ppg', action='store_true', help='Enable PPG conditioning (DiffATSM adaptive generator)')
+        self.parser.add_argument('--ppg_input_dim', type=int, default=768, help='HuBERT 12th-layer hidden dimension')
+        self.parser.add_argument('--ppg_hidden_dim', type=int, default=256, help='PPG PreNet hidden dimension (paper: 256)')
+        self.parser.add_argument('--voiced_ratio', type=float, default=0.7, help='Voiced/Unvoiced budget ratio (paper: 7:3 = 0.7)')
+        self.parser.add_argument('--vu_threshold', type=float, default=0.5, help='Energy threshold for V/UV detection (0.5 = 50%% of mean energy)')
+        
         # Architecture (Generator)
         self.parser.add_argument('--G_base_channels', type=int, default=64, help='# of base channels in G')
         self.parser.add_argument('--G_num_resblocks', type=int, default=6, help='# of resblocks in G\'s bottleneck')
         self.parser.add_argument('--G_num_downscales', type=int, default=3, help='# of downscaling layers in G')
-        self.parser.add_argument('--G_use_bias', type=bool, default=True, help='Determinhes whether bias is used in G\'s conv layers')
-        self.parser.add_argument('--G_skip', type=bool, default=True, help='Determines wether G uses skip connections (U-net)')
-        self.parser.add_argument('--G_noise', type=float, default=None, help='Determines how much does G addes noise to input')
-
+        self.parser.add_argument('--G_use_bias', type=bool, default=True, help='Determines whether bias is used in G\'s conv layers')
+        self.parser.add_argument('--G_skip', type=bool, default=True, help='Determines whether G uses skip connections (U-net)')
+        self.parser.add_argument('--G_noise', type=float, default=None, help='Determines how much does G adds noise to input')
 
         # Architecture (Discriminator)
         self.parser.add_argument('--D_base_channels', type=int, default=64, help='# of base channels in D')
@@ -56,8 +62,7 @@ class Config:
         self.parser.add_argument('--D_scale_weights_sigma', type=float, default=1.4, help='Determines the downscaling factor for multiscale D')
         self.parser.add_argument('--D_min_input_size', type=int, default=13, help='Determines the downscaling factor for multiscale D')
         self.parser.add_argument('--D_scale_weights_epoch_for_even_scales', type=int, default=25000, help='Determines the downscaling factor for multiscale D')
-        self.parser.add_argument('--D_noise', type=float, default=None, help='Determines how much does D addes noise to input')
-
+        self.parser.add_argument('--D_noise', type=float, default=None, help='Determines how much does D adds noise to input')
 
         # Optimization hyper-parameters
         self.parser.add_argument('--g_lr', type=float, default=0.00005, help='initial learning rate for generator')
@@ -73,12 +78,12 @@ class Config:
         self.parser.add_argument('--max_scale', type=float, default=1.8, help='max retargeting scale')
         self.parser.add_argument('--min_scale', type=float, default=0.3, help='min retargeting scale')
         self.parser.add_argument('--must_divide', type=int, default=8, help='must divide parameter for consistent output size')
-        self.parser.add_argument('--max_transform_magnitude', type=float, default=0.0, help='max manitude of geometric transformation')
+        self.parser.add_argument('--max_transform_magnitude', type=float, default=0.0, help='max magnitude of geometric transformation')
 
         # GPU & CPU settings
         self.parser.add_argument("--device", type=str, default='cpu', help="which device to use cpu or cuda")
         self.parser.add_argument("--batch_size", type=int, default=24, help="batch size")
-        self.parser.add_argument("--num_workers", type=int, default=4, help="number of workers for dataloader")
+        self.parser.add_argument("--num_workers", type=int, default=0, help="number of workers for dataloader")
         
         # DDP
         self.parser.add_argument("--distributed", action='store_true', help="Run with distributed data parallel")
@@ -126,6 +131,7 @@ class Config:
         mel_prms_json = json.loads(data)
         mel_params = AttrDict(mel_prms_json)
         setattr(self.conf, "mel_params", mel_params)
+        
         # Create results dir if does not exist
         self.conf.output_dir = prepare_result_dir(self.conf, self.conf.debug, inference_mode)
         return self.conf

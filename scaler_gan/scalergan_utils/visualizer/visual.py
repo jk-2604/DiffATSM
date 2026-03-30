@@ -59,8 +59,7 @@ class Visualizer:
             project_name (str): Project name
         """
         wandb.init(
-            project="scalerGAN",
-            entity="eyalcohen",
+            project="scalerGAN-2",
             name=project_name,
             config=vars(conf),
         )

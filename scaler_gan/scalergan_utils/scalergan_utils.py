@@ -140,7 +140,7 @@ def get_scale_weights(
     """
     num_scales = np.min(
         [
-            np.int(
+            int(
                 np.ceil(
                     np.log(np.min(input_shape) * 1.0 / min_size) / np.log(scale_factor)
                 )
@@ -254,19 +254,19 @@ def homography_grid(theta, size):
     b = 1
     y, x = torch.meshgrid(
         [
-            torch.linspace(-b, b, np.int(size[-2] * a)),
-            torch.linspace(-b, b, np.int(size[-1] * a)),
+            torch.linspace(-b, b, int(size[-2] * a)),
+            torch.linspace(-b, b, int(size[-1] * a)),
         ],
         indexing="ij",
     )
-    n = np.int(size[-2] * a) * np.int(size[-1] * a)
+    n = int(size[-2] * a) * int(size[-1] * a)
     hxy = torch.ones(n, 3, dtype=torch.float).to(theta.device)
     hxy[:, 0] = x.contiguous().view(-1)
     hxy[:, 1] = y.contiguous().view(-1)
     out = hxy[None, ...].matmul(theta.transpose(1, 2))
     # normalize
     out = out[:, :, :2] / out[:, :, 2:]
-    return out.view(theta.shape[0], np.int(size[-2] * a), np.int(size[-1] * a), 2)
+    return out.view(theta.shape[0], int(size[-2] * a), int(size[-1] * a), 2)
 
 
 def save_mels_plt(
